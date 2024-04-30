@@ -11,7 +11,7 @@ import SwiftUI
 struct SUPlaygroundApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView(store: Store(initialValue: AppState(), reducer: counterReducer(state:action:)))
+            ContentView(store: Store(initialValue: AppState(), reducer: appReducer(state:action:)))
         }
     }
 }

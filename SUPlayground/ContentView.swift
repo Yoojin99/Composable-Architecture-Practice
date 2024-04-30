@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var store: Store<AppState, CounterAction>
+    @ObservedObject var store: Store<AppState, AppAction>
 
     var body: some View {
         NavigationView {
@@ -84,11 +84,29 @@ struct AppState: Codable  {
  
  그렇다면 유저 액션을 data 로 표현하기 위해서는? enum이 적합함. 사용자 액션은 다양하고, 각 목록을 나열할 수 있으며 모든 액션을 다 표현할 수 있기 때문임.
  */
+
+/*
+ action 의 enum 분리를 통해 modularity 확보
+ */
+
 enum CounterAction {
     case decrTapped
     case incrTapped
+}
+
+enum PrimeModalAction {
     case saveFavoritePrimeTapped
     case removeFavoritePrimeTapped
+}
+
+enum FavoritePrimesAction {
+    case deleteFavoritePrimes(IndexSet)
+}
+
+enum AppAction {
+    case counter(CounterAction)
+    case primeModal(PrimeModalAction)
+    case favoritePrimes(FavoritePrimesAction)
 }
 
 /*
@@ -112,17 +130,30 @@ enum CounterAction {
 
  아래 코드에서는 copy 를 생성하는 boilerplate 코드/ 생성할 필요도 없을 뿐더러 수정 연산도 가능하다는 장점이 있음
  */
-
-func counterReducer(state: inout AppState, action: CounterAction) {
+/*
+ AppState 를 다루고 있기 때문에 action 도 counter 에 국한되지 않고 reducer 자체도 appReducer 가 되는 것이 합당함
+ */
+func appReducer(state: inout AppState, action: AppAction) {
     switch action {
-    case .decrTapped:
+    case .counter(.decrTapped):
         state.count -= 1
-    case .incrTapped:
+    case .counter(.incrTapped):
         state.count += 1
-    case .saveFavoritePrimeTapped:
-        fatalError()
-    case .removeFavoritePrimeTapped:
-        fatalError()
+    case .primeModal(.saveFavoritePrimeTapped):
+        state.favoritePrimes.insert(state.count)
+        state.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(state.count)))
+    case .primeModal(.removeFavoritePrimeTapped):
+        state.favoritePrimes.remove(state.count)
+        state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(state.count)))
+    case .favoritePrimes(.deleteFavoritePrimes(let indexSet)):
+        // side effect? 화면에 노출되는 폼이랑 완전히 통일해야 추후 문제 없을듯
+        let favoritePrimes = state.favoritePrimes.sorted()
+        let removedNumbers = indexSet.map{ favoritePrimes[$0] }
+        
+        for number in removedNumbers {
+            state.favoritePrimes.remove(number)
+            state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
+        }
     }
 }
 
@@ -162,7 +193,7 @@ struct CounterView: View {
      1. 0. 처음 화면에 진입했을 때는 0이겠지만 그 다음에는 마지막으로 우리가 수정한 상태값이어야 함
      2. @ObservedObject 에 사용되는 것은 Observable Object 프로토콜을 따라야 함. Int 를 extend 하기보다는 우리가 제어하는 상태값 자체가 bindable object가 되기를 바람.
      */
-    @ObservedObject var store: Store<AppState, CounterAction>
+    @ObservedObject var store: Store<AppState, AppAction>
     @State private var isPrimeModalShown: Bool = false
     @State private var nthPrimeNumber: Int? {
         didSet {
@@ -185,7 +216,7 @@ struct CounterView: View {
         VStack {
             HStack {
                 Button(action: {
-                    store.send(.decrTapped)
+                    store.send(.counter(.decrTapped))
 //                    // 직접 state 에 연산을 하는 것보다 이렇게 하는 것이 좋은 이유
 //                    // 여기서 사용자가 하는게 무엇인지를 설명하고 이를 함수에 전달하는 것!
 //                    // 이는 사용자 액션을 declarative 하게 정의했다고 할 수 있음
@@ -197,7 +228,7 @@ struct CounterView: View {
                     Text("-")
                 })
                 Text("\(store.value.count)")
-                Button(action: { store.send(.incrTapped) }, label: {
+                Button(action: { store.send(.counter(.incrTapped)) }, label: {
                     Text("+")
                 })
             }
@@ -262,7 +293,7 @@ func nthPrime(_ n: Int, callback: @escaping (Int?) -> Void) -> Void {
 }
 
 struct IsPrimeModalView: View {
-    @ObservedObject var store: Store<AppState, CounterAction>
+    @ObservedObject var store: Store<AppState, AppAction>
     
     private var isSavedInFavoritePrimes: Bool {
         store.value.favoritePrimes.contains(store.value.count)
@@ -275,17 +306,17 @@ struct IsPrimeModalView: View {
                 
                 Button(action: {
                     if isSavedInFavoritePrimes {
-                        store.value.favoritePrimes.remove(store.value.count)
-                        store.value.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(store.value.count)))
+                        store.send(.primeModal(.removeFavoritePrimeTapped))
                     } else {
-                        store.value.favoritePrimes.insert(store.value.count)
-                        // MARK: 문제 2
-                        // activityFeed 에 추가하는 건 여기서만이 아니라 Favorite Primes 화면에서도 수행해야 함!
-                        // 근데 이를 개발자의 실수로 잊어먹기 쉬움
-                        // AppState 에 한번에 수행하는 함수를 추가할 수도 있음. 이러면 상태를 변경하는 방법이 세가지임
-                        // 1. inline 2. action block 3. struct 에 메서드 추가
-                        // 팀은 이거에 대해 가이드라인을 또 작성해야 하고 Apple 은 이런 방법에 대해 명시적인 가이드라인을 제공하고 있지 않음
-                        store.value.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(store.value.count)))
+                        store.send(.primeModal(.saveFavoritePrimeTapped))
+//                        store.value.favoritePrimes.insert(store.value.count)
+//                        // MARK: 문제 2
+//                        // activityFeed 에 추가하는 건 여기서만이 아니라 Favorite Primes 화면에서도 수행해야 함!
+//                        // 근데 이를 개발자의 실수로 잊어먹기 쉬움
+//                        // AppState 에 한번에 수행하는 함수를 추가할 수도 있음. 이러면 상태를 변경하는 방법이 세가지임
+//                        // 1. inline 2. action block 3. struct 에 메서드 추가
+//                        // 팀은 이거에 대해 가이드라인을 또 작성해야 하고 Apple 은 이런 방법에 대해 명시적인 가이드라인을 제공하고 있지 않음
+//                        store.value.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(store.value.count)))
                     }
                 }, label: {
                     if isSavedInFavoritePrimes {
@@ -307,7 +338,7 @@ struct FavoritePrimesView: View {
     // 우리가 원하는 것만 알 수 있게 한다면 이 view 를 별도로 분리해서 완전히 고립되게 할 수 있음
     // 이러면 이해하기 쉽고, 고립되어 있기 때문에 다른 요소를 생각할 필요 없음. modular application design 의 원칙임
     // 이 view 를 완전히 고립시켜서 다른 ui 에 쉽게 plug in 할 수 있게 하는 것.
-    @ObservedObject var store: Store<AppState, CounterAction>
+    @ObservedObject var store: Store<AppState, AppAction>
     
     var body: some View {
         List {
@@ -330,5 +361,5 @@ struct FavoritePrimesView: View {
 }
 
 #Preview {
-    ContentView(store: Store<AppState, CounterAction>(initialValue: AppState(), reducer: counterReducer(state:action:)))
+    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: appReducer(state:action:)))
 }
