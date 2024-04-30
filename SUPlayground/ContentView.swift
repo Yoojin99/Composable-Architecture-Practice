@@ -8,16 +8,16 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var state: AppState
+    @ObservedObject var store: Store<AppState, CounterAction>
 
     var body: some View {
         NavigationView {
             List {
-                NavigationLink(destination: CounterView(state: state)) {
+                NavigationLink(destination: CounterView(store: store)) {
                     Text("Counter demo")
                 }
                 
-                NavigationLink(destination: FavoritePrimesView(state: state)) {
+                NavigationLink(destination: FavoritePrimesView(store: store)) {
                     Text("Favorite Primes")
                 }
             }
@@ -33,18 +33,15 @@ private func ordinal(_ n: Int) -> String {
 }
 
 /*
- ObservableObject 는 왜 struct 이면 안되는가?
- AnyObject 를 상속하고 있음 -> 근거가 있음.
- 유지되는 단 하나의 source 를 원하는데 struct 로 만들게 되면
- 상태값을 전달할 때마다 복사가 되기 때문.
- 접근하는 모든 곳에서 동일한 값을 바라봐야 하기 때문에 class 이어야 합당함
+ class -> struct. Decoupled state from combine, SwiftUI framework, 그래서 리눅스같은 곳에서도 이 구조체를 따로 가져다 쓸 수 있음.
+ 값 타입으로 변한 것 자체가 큰 장점. 
  */
-class AppState: ObservableObject, Codable  {
+struct AppState: Codable  {
     // Combine 에서 온 개념. state 에 변화가 생길때 이 변화에 관심있는 subscriber 에게 알려줌
-    @Published var count: Int = 0
-    @Published var favoritePrimes: Set<Int> = []
-    @Published var loggedInUser: User?
-    @Published var activityFeed: [Activity] = []
+    var count: Int = 0
+    var favoritePrimes: Set<Int> = []
+    var loggedInUser: User?
+    var activityFeed: [Activity] = []
     
     // listing properties we want to save
     enum CodingKeys: CodingKey {
@@ -57,7 +54,7 @@ class AppState: ObservableObject, Codable  {
         try container.encode(count, forKey: .count)
     }
     
-    required init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         count = try container.decode(Int.self, forKey: .count)
@@ -82,6 +79,71 @@ class AppState: ObservableObject, Codable  {
     }
 }
 
+/*
+ State mutation : 현재 state 가 있고, 어떤 유저 액션이 들어오면 새로운 버전의 state 를 만드는 것. 즉 함수같이 현재 상태와 입력값이 주어지면 다음 상태를 리턴할 수 있는 것.
+ 
+ 그렇다면 유저 액션을 data 로 표현하기 위해서는? enum이 적합함. 사용자 액션은 다양하고, 각 목록을 나열할 수 있으며 모든 액션을 다 표현할 수 있기 때문임.
+ */
+enum CounterAction {
+    case decrTapped
+    case incrTapped
+    case saveFavoritePrimeTapped
+    case removeFavoritePrimeTapped
+}
+
+/*
+ reducer인 이유? array.reduce() 메서드와 비슷. 초기값이 주어지고 각 원소마다 연산을 수행해서 새로운 상태를 반환하기 때문.
+ 
+ 매번 새로운 state 를 리턴하는데, 여러 mutation 을 한 번에 받아서 처리하지 않기 때문에 아래와 같이 중첩해서 작성해야 함.
+ 
+ let state = AppState()
+ counterReducer(
+     state: counterReducer(
+         state: state,
+         action: .decrTapped),
+     action: .incrTapped)
+ 
+ 시간에 따라 변하는 state 를 관리할 로직은? store 에서 처리 가능
+ */
+/*
+ AppState 자체는 굉장히 클 수 있고 사용자 액션이 들어올 때마다 매번 state 의 새로운 copy 를 생성하는게 scalable 하지 않을 것
+ (A) -> (A) == (inout A) -> Void
+ (A, B) -> (A, C) == (inout A, B) -> C
+
+ 아래 코드에서는 copy 를 생성하는 boilerplate 코드/ 생성할 필요도 없을 뿐더러 수정 연산도 가능하다는 장점이 있음
+ */
+
+func counterReducer(state: inout AppState, action: CounterAction) {
+    switch action {
+    case .decrTapped:
+        state.count -= 1
+    case .incrTapped:
+        state.count += 1
+    case .saveFavoritePrimeTapped:
+        fatalError()
+    case .removeFavoritePrimeTapped:
+        fatalError()
+    }
+}
+
+
+final class Store<Value, Action>: ObservableObject {
+    let reducer: (inout Value, Action) -> Void
+    @Published var value: Value
+    
+    init(initialValue: Value, reducer: @escaping (inout Value, Action) -> Void) {
+        self.value = initialValue
+        self.reducer = reducer
+    }
+    
+    // 연산을 view 에서 떼내고, reducer 내부로 옮겨버림
+    // view 내부에 연산은 오직 send(userAction) 메서드를 통해서만 이루어짐
+    // 일관된 방법을 제공한다
+    func send(_ action: Action) {
+        reducer(&self.value, action)
+    }
+}
+
 struct CounterView: View {
     // @State 는 hyper local state 를 위한 것
     // 외부로 나갔다 다시 들어올 경우 state 를 잃어버림
@@ -100,7 +162,7 @@ struct CounterView: View {
      1. 0. 처음 화면에 진입했을 때는 0이겠지만 그 다음에는 마지막으로 우리가 수정한 상태값이어야 함
      2. @ObservedObject 에 사용되는 것은 Observable Object 프로토콜을 따라야 함. Int 를 extend 하기보다는 우리가 제어하는 상태값 자체가 bindable object가 되기를 바람.
      */
-    @ObservedObject var state: AppState
+    @ObservedObject var store: Store<AppState, CounterAction>
     @State private var isPrimeModalShown: Bool = false
     @State private var nthPrimeNumber: Int? {
         didSet {
@@ -123,14 +185,19 @@ struct CounterView: View {
         VStack {
             HStack {
                 Button(action: {
-                    state.count -= 1
+                    store.send(.decrTapped)
+//                    // 직접 state 에 연산을 하는 것보다 이렇게 하는 것이 좋은 이유
+//                    // 여기서 사용자가 하는게 무엇인지를 설명하고 이를 함수에 전달하는 것!
+//                    // 이는 사용자 액션을 declarative 하게 정의했다고 할 수 있음
+//                    // 즉 연산을 하기보다는 사용자의 액션을 정의했다고 할 수 있음
+//                    // 연산은 reducer 함수에 넣어둠으로써 연산에 적합한 장소를 찾은 것
+//                    self.store.value = counterReducer(state: self.store.value, action: .decrTapped)
+////                    store.value.count -= 1
                 }, label: {
                     Text("-")
                 })
-                Text("\(state.count)")
-                Button(action: {
-                    state.count += 1
-                }, label: {
+                Text("\(store.value.count)")
+                Button(action: { store.send(.incrTapped) }, label: {
                     Text("+")
                 })
             }
@@ -150,12 +217,12 @@ struct CounterView: View {
                 // MARK: 문제 3
                 // 제어할 수 없음 : 취소, throttle 할 수 있는 방법 없으며 테스트도 안됨.
                 // side effect 를 수행하는 방법은 우리한테 달려있음
-                nthPrime(state.count) { prime in
+                nthPrime(store.value.count) { prime in
                     isNthPrimeButtonDisabled = false
                     self.nthPrimeNumber = prime
                 }
             }, label: {
-                Text("What is the \(ordinal(state.count)) prime?")
+                Text("What is the \(ordinal(store.value.count)) prime?")
             })
             .disabled(isNthPrimeButtonDisabled)
         }
@@ -167,9 +234,9 @@ struct CounterView: View {
             // 여기에 더 복잡한 로직을 추가하는 건 비추.
             // 더 indentation 이 들어갈수록 가독성이 떨어지며 이해가 어려움.
             // SU view 의 장점 중하나는 view 를 쪼개기 편하다는 것.
-            IsPrimeModalView(state: state)
+            IsPrimeModalView(store: store)
         })
-        .alert("The \(ordinal(state.count)) prime is \(nthPrimeNumber ?? 0)", isPresented: $isNthPrimeAlertShown, actions: {
+        .alert("The \(ordinal(store.value.count)) prime is \(nthPrimeNumber ?? 0)", isPresented: $isNthPrimeAlertShown, actions: {
             Button(role: .cancel, action: {}) {
                 Text("Ok")
             }
@@ -195,30 +262,30 @@ func nthPrime(_ n: Int, callback: @escaping (Int?) -> Void) -> Void {
 }
 
 struct IsPrimeModalView: View {
-    @ObservedObject var state: AppState
+    @ObservedObject var store: Store<AppState, CounterAction>
     
     private var isSavedInFavoritePrimes: Bool {
-        state.favoritePrimes.contains(state.count)
+        store.value.favoritePrimes.contains(store.value.count)
     }
     
     var body: some View {
         VStack {
-            if Math.isPrime(n: state.count) {
-                Text("\(state.count) is prime")
+            if Math.isPrime(n: store.value.count) {
+                Text("\(store.value.count) is prime")
                 
                 Button(action: {
                     if isSavedInFavoritePrimes {
-                        state.favoritePrimes.remove(state.count)
-                        state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(state.count)))
+                        store.value.favoritePrimes.remove(store.value.count)
+                        store.value.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(store.value.count)))
                     } else {
-                        state.favoritePrimes.insert(state.count)
+                        store.value.favoritePrimes.insert(store.value.count)
                         // MARK: 문제 2
                         // activityFeed 에 추가하는 건 여기서만이 아니라 Favorite Primes 화면에서도 수행해야 함!
                         // 근데 이를 개발자의 실수로 잊어먹기 쉬움
                         // AppState 에 한번에 수행하는 함수를 추가할 수도 있음. 이러면 상태를 변경하는 방법이 세가지임
                         // 1. inline 2. action block 3. struct 에 메서드 추가
                         // 팀은 이거에 대해 가이드라인을 또 작성해야 하고 Apple 은 이런 방법에 대해 명시적인 가이드라인을 제공하고 있지 않음
-                        state.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(state.count)))
+                        store.value.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(store.value.count)))
                     }
                 }, label: {
                     if isSavedInFavoritePrimes {
@@ -228,7 +295,7 @@ struct IsPrimeModalView: View {
                     }
                 })
             } else {
-                Text("\(state.count) is not prime")
+                Text("\(store.value.count) is not prime")
             }
         }
     }
@@ -240,11 +307,11 @@ struct FavoritePrimesView: View {
     // 우리가 원하는 것만 알 수 있게 한다면 이 view 를 별도로 분리해서 완전히 고립되게 할 수 있음
     // 이러면 이해하기 쉽고, 고립되어 있기 때문에 다른 요소를 생각할 필요 없음. modular application design 의 원칙임
     // 이 view 를 완전히 고립시켜서 다른 ui 에 쉽게 plug in 할 수 있게 하는 것.
-    @ObservedObject var state: AppState
+    @ObservedObject var store: Store<AppState, CounterAction>
     
     var body: some View {
         List {
-            let favoritePrimes = state.favoritePrimes.sorted()
+            let favoritePrimes = store.value.favoritePrimes.sorted()
             
             ForEach(favoritePrimes, id: \.self) { prime in
                 Text("\(prime)")
@@ -253,8 +320,8 @@ struct FavoritePrimesView: View {
                 let removedNumbers = indexSet.map{ favoritePrimes[$0] }
                 
                 for number in removedNumbers {
-                    state.favoritePrimes.remove(number)
-                    state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
+                    store.value.favoritePrimes.remove(number)
+                    store.value.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
                 }
             })
         }
@@ -263,5 +330,5 @@ struct FavoritePrimesView: View {
 }
 
 #Preview {
-    ContentView(state: AppState())
+    ContentView(store: Store<AppState, CounterAction>(initialValue: AppState(), reducer: counterReducer(state:action:)))
 }
