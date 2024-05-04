@@ -103,12 +103,13 @@ enum AppAction {
     case favoritePrimes(FavoritePrimesAction)
 }
 
-func counterReducer(state: inout AppState, action: AppAction) {
+func counterReducer(state: inout Int, action: AppAction) {
     switch action {
     case .counter(.decrTapped):
-        state.count -= 1
+        // 이 함수를 처음 본 개발자는 이 reducer 가 단순히 int 만 조작한다는 것을 알고, 쓸데없이 전체 appstate 내부의 값을 수정하지 않을 것임
+        state -= 1
     case .counter(.incrTapped):
-        state.count += 1
+        state += 1
     default:
         break
     }
@@ -152,7 +153,26 @@ func combine<Value, Action>(
     }
 }
 
-let appReducer = combine(counterReducer, primeModalReducer, favoritePrimesReducer)
+func pullback<LocalValue, GlobalValue, Action>(
+    _ reducer: @escaping (inout LocalValue, Action) -> Void,
+    value: WritableKeyPath<GlobalValue, LocalValue>
+//    _ get: @escaping (GlobalValue) -> LocalValue,
+//    _ set: @escaping (inout GlobalValue, LocalValue) -> Void
+) -> (inout GlobalValue, Action) -> Void {
+    return { globalValue, action in
+        reducer(&globalValue[keyPath: value], action)
+//        var localValue = get(globalValue)
+//        reducer(&localValue, action)
+//        set(&globalValue, localValue)
+    }
+}
+
+let appReducer = combine(
+    pullback(counterReducer, value: \.count),
+    primeModalReducer,
+    favoritePrimesReducer
+)
+
 
 final class Store<Value, Action>: ObservableObject {
     let reducer: (inout Value, Action) -> Void
