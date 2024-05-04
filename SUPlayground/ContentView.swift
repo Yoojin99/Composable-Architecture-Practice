@@ -80,12 +80,6 @@ struct AppState: Codable  {
 }
 
 /*
- State mutation : 현재 state 가 있고, 어떤 유저 액션이 들어오면 새로운 버전의 state 를 만드는 것. 즉 함수같이 현재 상태와 입력값이 주어지면 다음 상태를 리턴할 수 있는 것.
- 
- 그렇다면 유저 액션을 data 로 표현하기 위해서는? enum이 적합함. 사용자 액션은 다양하고, 각 목록을 나열할 수 있으며 모든 액션을 다 표현할 수 있기 때문임.
- */
-
-/*
  action 의 enum 분리를 통해 modularity 확보
  */
 
@@ -109,44 +103,33 @@ enum AppAction {
     case favoritePrimes(FavoritePrimesAction)
 }
 
-/*
- reducer인 이유? array.reduce() 메서드와 비슷. 초기값이 주어지고 각 원소마다 연산을 수행해서 새로운 상태를 반환하기 때문.
- 
- 매번 새로운 state 를 리턴하는데, 여러 mutation 을 한 번에 받아서 처리하지 않기 때문에 아래와 같이 중첩해서 작성해야 함.
- 
- let state = AppState()
- counterReducer(
-     state: counterReducer(
-         state: state,
-         action: .decrTapped),
-     action: .incrTapped)
- 
- 시간에 따라 변하는 state 를 관리할 로직은? store 에서 처리 가능
- */
-/*
- AppState 자체는 굉장히 클 수 있고 사용자 액션이 들어올 때마다 매번 state 의 새로운 copy 를 생성하는게 scalable 하지 않을 것
- (A) -> (A) == (inout A) -> Void
- (A, B) -> (A, C) == (inout A, B) -> C
-
- 아래 코드에서는 copy 를 생성하는 boilerplate 코드/ 생성할 필요도 없을 뿐더러 수정 연산도 가능하다는 장점이 있음
- */
-/*
- AppState 를 다루고 있기 때문에 action 도 counter 에 국한되지 않고 reducer 자체도 appReducer 가 되는 것이 합당함
- */
-func appReducer(state: inout AppState, action: AppAction) {
+func counterReducer(state: inout AppState, action: AppAction) {
     switch action {
     case .counter(.decrTapped):
         state.count -= 1
     case .counter(.incrTapped):
         state.count += 1
+    default:
+        break
+    }
+}
+
+func primeModalReducer(state: inout AppState, action: AppAction) {
+    switch action {
     case .primeModal(.saveFavoritePrimeTapped):
         state.favoritePrimes.insert(state.count)
         state.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(state.count)))
     case .primeModal(.removeFavoritePrimeTapped):
         state.favoritePrimes.remove(state.count)
         state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(state.count)))
+    default:
+        break
+    }
+}
+
+func favoritePrimesReducer(state: inout AppState, action: AppAction) {
+    switch action {
     case .favoritePrimes(.deleteFavoritePrimes(let indexSet)):
-        // side effect? 화면에 노출되는 폼이랑 완전히 통일해야 추후 문제 없을듯
         let favoritePrimes = state.favoritePrimes.sorted()
         let removedNumbers = indexSet.map{ favoritePrimes[$0] }
         
@@ -154,9 +137,22 @@ func appReducer(state: inout AppState, action: AppAction) {
             state.favoritePrimes.remove(number)
             state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
         }
+    default:
+        break
     }
 }
 
+func combine<Value, Action>(
+    _ reducers: (inout Value, Action) -> Void...
+) -> (inout Value, Action) -> Void {
+    return { value, action in
+        for reducer in reducers {
+            reducer(&value, action)
+        }
+    }
+}
+
+let appReducer = combine(counterReducer, primeModalReducer, favoritePrimesReducer)
 
 final class Store<Value, Action>: ObservableObject {
     let reducer: (inout Value, Action) -> Void
@@ -361,5 +357,5 @@ struct FavoritePrimesView: View {
 }
 
 #Preview {
-    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: appReducer(state:action:)))
+    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: appReducer))
 }
