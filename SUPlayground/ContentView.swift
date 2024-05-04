@@ -77,6 +77,21 @@ struct AppState: Codable  {
             case removedFavoritePrime(Int)
         }
     }
+    
+    // keypath 생성용
+    var favoritePrimesState: FavoritePrimesState {
+        get {
+            FavoritePrimesState(
+                favoritePrimes: self.favoritePrimes, 
+                activityFeed: self.activityFeed
+            )
+        }
+        
+        set {
+            self.favoritePrimes = newValue.favoritePrimes
+            self.activityFeed = newValue.activityFeed
+        }
+    }
 }
 
 /*
@@ -115,6 +130,7 @@ func counterReducer(state: inout Int, action: AppAction) {
     }
 }
 
+// 굉장히 많은 state 에 접근하고 있기 때문에 굳이 state 를 분리할 필요 없음...? 어떤 건 분리하고 어떤 건 분리하지 않고 이게 과연 좋은건가........
 func primeModalReducer(state: inout AppState, action: AppAction) {
     switch action {
     case .primeModal(.saveFavoritePrimeTapped):
@@ -128,7 +144,12 @@ func primeModalReducer(state: inout AppState, action: AppAction) {
     }
 }
 
-func favoritePrimesReducer(state: inout AppState, action: AppAction) {
+struct FavoritePrimesState {
+    var favoritePrimes: Set<Int>
+    var activityFeed: [AppState.Activity]
+}
+
+func favoritePrimesReducer(state: inout FavoritePrimesState, action: AppAction) {
     switch action {
     case .favoritePrimes(.deleteFavoritePrimes(let indexSet)):
         let favoritePrimes = state.favoritePrimes.sorted()
@@ -170,7 +191,7 @@ func pullback<LocalValue, GlobalValue, Action>(
 let appReducer = combine(
     pullback(counterReducer, value: \.count),
     primeModalReducer,
-    favoritePrimesReducer
+    pullback(favoritePrimesReducer, value: \.favoritePrimesState)
 )
 
 
