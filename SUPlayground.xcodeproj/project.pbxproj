@@ -15,8 +15,6 @@
 		6B5062D82BD5038E0091C5D0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5062D72BD5038E0091C5D0 /* ContentView.swift */; };
 		6B5062DA2BD5038F0091C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B5062D92BD5038F0091C5D0 /* Assets.xcassets */; };
 		6B5062DD2BD5038F0091C5D0 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B5062DC2BD5038F0091C5D0 /* Preview Assets.xcassets */; };
-		6B9A2AFD2BE79F0A000F3FC2 /* EnumProperties in Frameworks */ = {isa = PBXBuildFile; productRef = 6B9A2AFC2BE79F0A000F3FC2 /* EnumProperties */; };
-		6B9A2AFF2BE79F0A000F3FC2 /* generate-enum-properties in Frameworks */ = {isa = PBXBuildFile; productRef = 6B9A2AFE2BE79F0A000F3FC2 /* generate-enum-properties */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,8 +34,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6B9A2AFD2BE79F0A000F3FC2 /* EnumProperties in Frameworks */,
-				6B9A2AFF2BE79F0A000F3FC2 /* generate-enum-properties in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,8 +136,6 @@
 			);
 			name = SUPlayground;
 			packageProductDependencies = (
-				6B9A2AFC2BE79F0A000F3FC2 /* EnumProperties */,
-				6B9A2AFE2BE79F0A000F3FC2 /* generate-enum-properties */,
 			);
 			productName = SUPlayground;
 			productReference = 6B5062D22BD5038E0091C5D0 /* SUPlayground.app */;
@@ -172,7 +166,6 @@
 			);
 			mainGroup = 6B5062C92BD5038E0091C5D0;
 			packageReferences = (
-				6B9A2AFB2BE79F0A000F3FC2 /* XCRemoteSwiftPackageReference "swift-enum-properties" */,
 			);
 			productRefGroup = 6B5062D32BD5038E0091C5D0 /* Products */;
 			projectDirPath = "";
@@ -409,30 +402,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		6B9A2AFB2BE79F0A000F3FC2 /* XCRemoteSwiftPackageReference "swift-enum-properties" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-enum-properties.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		6B9A2AFC2BE79F0A000F3FC2 /* EnumProperties */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B9A2AFB2BE79F0A000F3FC2 /* XCRemoteSwiftPackageReference "swift-enum-properties" */;
-			productName = EnumProperties;
-		};
-		6B9A2AFE2BE79F0A000F3FC2 /* generate-enum-properties */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6B9A2AFB2BE79F0A000F3FC2 /* XCRemoteSwiftPackageReference "swift-enum-properties" */;
-			productName = "generate-enum-properties";
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6B5062CA2BD5038E0091C5D0 /* Project object */;
 }

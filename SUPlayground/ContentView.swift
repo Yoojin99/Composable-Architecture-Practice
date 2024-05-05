@@ -211,30 +211,16 @@ func combine<Value, Action>(
     }
 }
 
-func pullback<LocalValue, GlobalValue, Action>(
-    _ reducer: @escaping (inout LocalValue, Action) -> Void,
-    value: WritableKeyPath<GlobalValue, LocalValue>
-//    _ get: @escaping (GlobalValue) -> LocalValue,
-//    _ set: @escaping (inout GlobalValue, LocalValue) -> Void
-) -> (inout GlobalValue, Action) -> Void {
-    return { globalValue, action in
-        reducer(&globalValue[keyPath: value], action)
-//        var localValue = get(globalValue)
-//        reducer(&localValue, action)
-//        set(&globalValue, localValue)
-    }
-}
-
-func pullback<Value, LocalAction, GlobalAction>(
-    _ reducer: @escaping (inout Value, LocalAction) -> Void,
+func pullback<LocalValue, GlobalValue, LocalAction, GlobalAction>(
+    _ reducer: @escaping (inout LocalValue, LocalAction) -> Void,
+    value: WritableKeyPath<GlobalValue, LocalValue>,
     action: WritableKeyPath<GlobalAction, LocalAction?>
-) -> (inout Value, GlobalAction) -> Void {
-    return { value, globalAction in
+) -> (inout GlobalValue, GlobalAction) -> Void {
+    return { globalValue, globalAction in
         guard let localAction = globalAction[keyPath: action] else {
             return
         }
-        
-        reducer(&value, localAction)
+        reducer(&globalValue[keyPath: value], localAction)
     }
 }
 
@@ -266,9 +252,9 @@ struct EnumKeyPath<Root, Value> {
 // \AppAction.counter // EnumKeyPath<AppAction, CounterAction>
 
 let appReducer = combine(
-    pullback(counterReducer, value: \.count),
+    pullback(counterReducer, value: \.count, action: \.counter),
     primeModalReducer,
-    pullback(favoritePrimesReducer, value: \.favoritePrimesState)
+    pullback(favoritePrimesReducer, value: \.favoritePrimesState, action: \.self)
 )
 
 
