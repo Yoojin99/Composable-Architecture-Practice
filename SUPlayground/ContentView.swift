@@ -225,7 +225,18 @@ func pullback<LocalValue, GlobalValue, Action>(
     }
 }
 
-
+func pullback<Value, LocalAction, GlobalAction>(
+    _ reducer: @escaping (inout Value, LocalAction) -> Void,
+    action: WritableKeyPath<GlobalAction, LocalAction?>
+) -> (inout Value, GlobalAction) -> Void {
+    return { value, globalAction in
+        guard let localAction = globalAction[keyPath: action] else {
+            return
+        }
+        
+        reducer(&value, localAction)
+    }
+}
 
 struct _KeyPath<Root, Value> {
     let get: (Root) -> Value
