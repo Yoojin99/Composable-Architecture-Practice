@@ -116,17 +116,54 @@ enum AppAction {
     case counter(CounterAction)
     case primeModal(PrimeModalAction)
     case favoritePrimes(FavoritePrimesAction)
+    
+    var counter: CounterAction? {
+        get {
+            guard case let .counter(value) = self else {
+                return nil
+            }
+            return value
+        }
+        set {
+            guard case .counter = self, let newValue = newValue else { return }
+            self = .counter(newValue)
+        }
+    }
+    
+    var primeModal: PrimeModalAction? {
+        get {
+            guard case let .primeModal(value) = self else {
+                return nil
+            }
+            return value
+        }
+        set {
+            guard case .primeModal = self, let newValue = newValue else { return }
+            self = .primeModal(newValue)
+        }
+    }
+    
+    var favoritePrimes: FavoritePrimesAction? {
+        get {
+            guard case let .favoritePrimes(value) = self else {
+                return nil
+            }
+            return value
+        }
+        set {
+            guard case .favoritePrimes = self, let newValue = newValue else { return }
+            self = .favoritePrimes(newValue)
+        }
+    }
 }
 
-func counterReducer(state: inout Int, action: AppAction) {
+func counterReducer(state: inout Int, action: CounterAction) {
     switch action {
-    case .counter(.decrTapped):
+    case .decrTapped:
         // 이 함수를 처음 본 개발자는 이 reducer 가 단순히 int 만 조작한다는 것을 알고, 쓸데없이 전체 appstate 내부의 값을 수정하지 않을 것임
         state -= 1
-    case .counter(.incrTapped):
+    case .incrTapped:
         state += 1
-    default:
-        break
     }
 }
 
@@ -187,6 +224,35 @@ func pullback<LocalValue, GlobalValue, Action>(
 //        set(&globalValue, localValue)
     }
 }
+
+
+
+struct _KeyPath<Root, Value> {
+    let get: (Root) -> Value
+    let set: (inout Root, Value) -> Void
+}
+
+// enum 의 get, set
+
+// setter
+// counter.incrTapped -> AppAction , setter : AppAction.counter(.incrTapped)
+
+// getter
+//let action = AppAction.favoritePrimes(.deleteFavoritePrimes([1]))
+//let favoritePrimes: FavoritePrimesAction?
+//switch action {
+//case let .favoritePrimes(action):
+//    favoritePrimes = action
+//default:
+//    favoritePrimes = nil
+//}
+
+struct EnumKeyPath<Root, Value> {
+    let embed: (Value) -> Root
+    let extract: (Root) -> Value?
+}
+
+// \AppAction.counter // EnumKeyPath<AppAction, CounterAction>
 
 let appReducer = combine(
     pullback(counterReducer, value: \.count),
