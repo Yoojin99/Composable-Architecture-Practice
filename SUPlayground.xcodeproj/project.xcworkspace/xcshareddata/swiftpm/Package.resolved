@@ -1,0 +1,32 @@
+{
+  "pins" : [
+    {
+      "identity" : "swift-enum-properties",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pointfreeco/swift-enum-properties.git",
+      "state" : {
+        "revision" : "783a0554c23ac27426968ad6faf412c627767f43",
+        "version" : "0.1.0"
+      }
+    },
+    {
+      "identity" : "swift-snapshot-testing",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pointfreeco/swift-snapshot-testing.git",
+      "state" : {
+        "revision" : "26ed3a2b4a2df47917ca9b790a57f91285b923fb",
+        "version" : "1.12.0"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "43aa4a19b8105a803d8149ad2a86aa53a77efef3",
+        "version" : "0.50000.0"
+      }
+    }
+  ],
+  "version" : 2
+}
