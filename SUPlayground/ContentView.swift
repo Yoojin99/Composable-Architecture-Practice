@@ -168,16 +168,14 @@ func counterReducer(state: inout Int, action: CounterAction) {
 }
 
 // 굉장히 많은 state 에 접근하고 있기 때문에 굳이 state 를 분리할 필요 없음...? 어떤 건 분리하고 어떤 건 분리하지 않고 이게 과연 좋은건가........
-func primeModalReducer(state: inout AppState, action: AppAction) {
+func primeModalReducer(state: inout AppState, action: PrimeModalAction) {
     switch action {
-    case .primeModal(.saveFavoritePrimeTapped):
+    case .saveFavoritePrimeTapped:
         state.favoritePrimes.insert(state.count)
         state.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(state.count)))
-    case .primeModal(.removeFavoritePrimeTapped):
+    case .removeFavoritePrimeTapped:
         state.favoritePrimes.remove(state.count)
         state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(state.count)))
-    default:
-        break
     }
 }
 
@@ -186,9 +184,9 @@ struct FavoritePrimesState {
     var activityFeed: [AppState.Activity]
 }
 
-func favoritePrimesReducer(state: inout FavoritePrimesState, action: AppAction) {
+func favoritePrimesReducer(state: inout FavoritePrimesState, action: FavoritePrimesAction) {
     switch action {
-    case .favoritePrimes(.deleteFavoritePrimes(let indexSet)):
+    case .deleteFavoritePrimes(let indexSet):
         let favoritePrimes = state.favoritePrimes.sorted()
         let removedNumbers = indexSet.map{ favoritePrimes[$0] }
         
@@ -196,8 +194,6 @@ func favoritePrimesReducer(state: inout FavoritePrimesState, action: AppAction) 
             state.favoritePrimes.remove(number)
             state.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
         }
-    default:
-        break
     }
 }
 
@@ -251,10 +247,10 @@ struct EnumKeyPath<Root, Value> {
 
 // \AppAction.counter // EnumKeyPath<AppAction, CounterAction>
 
-let appReducer = combine(
+let appReducer: (inout AppState, AppAction) -> Void = combine(
     pullback(counterReducer, value: \.count, action: \.counter),
-    primeModalReducer,
-    pullback(favoritePrimesReducer, value: \.favoritePrimesState, action: \.self)
+    pullback(primeModalReducer, value: \.self, action: \.primeModal),
+    pullback(favoritePrimesReducer, value: \.favoritePrimesState, action: \.favoritePrimes)
 )
 
 
