@@ -11,7 +11,18 @@ import SwiftUI
 struct SUPlaygroundApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView(store: Store(initialValue: AppState(), reducer: logging(activityFeed(appReducer))))
+            ContentView(
+                store: Store(
+                    initialValue: AppState(),
+                    reducer: with(
+                        appReducer,
+                        compose(
+                            logging,
+                            activityFeed
+                        )
+                    )
+                )
+            )
         }
     }
 }

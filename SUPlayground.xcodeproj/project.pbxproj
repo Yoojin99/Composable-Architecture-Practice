@@ -7,26 +7,24 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		6B1A0CD22BDCE86C00B2870C /* Math.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1A0CD12BDCE86C00B2870C /* Math.swift */; };
 		6B1A0CD72BDCF06200B2870C /* WolframPrimeResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1A0CD62BDCF06200B2870C /* WolframPrimeResult.swift */; };
 		6B1A0CD92BDCF0A400B2870C /* WolframDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1A0CD82BDCF0A400B2870C /* WolframDataSource.swift */; };
-		6B1A0CDC2BDCF15B00B2870C /* Wolfram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B1A0CDB2BDCF15B00B2870C /* Wolfram.swift */; };
 		6B5062D62BD5038E0091C5D0 /* SUPlaygroundApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5062D52BD5038E0091C5D0 /* SUPlaygroundApp.swift */; };
 		6B5062D82BD5038E0091C5D0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5062D72BD5038E0091C5D0 /* ContentView.swift */; };
 		6B5062DA2BD5038F0091C5D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B5062D92BD5038F0091C5D0 /* Assets.xcassets */; };
 		6B5062DD2BD5038F0091C5D0 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6B5062DC2BD5038F0091C5D0 /* Preview Assets.xcassets */; };
+		6BB196712C04BDA300E8DA03 /* Util.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB196702C04BDA300E8DA03 /* Util.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		6B1A0CD12BDCE86C00B2870C /* Math.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Math.swift; sourceTree = "<group>"; };
 		6B1A0CD62BDCF06200B2870C /* WolframPrimeResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolframPrimeResult.swift; sourceTree = "<group>"; };
 		6B1A0CD82BDCF0A400B2870C /* WolframDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WolframDataSource.swift; sourceTree = "<group>"; };
-		6B1A0CDB2BDCF15B00B2870C /* Wolfram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Wolfram.swift; sourceTree = "<group>"; };
 		6B5062D22BD5038E0091C5D0 /* SUPlayground.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SUPlayground.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B5062D52BD5038E0091C5D0 /* SUPlaygroundApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SUPlaygroundApp.swift; sourceTree = "<group>"; };
 		6B5062D72BD5038E0091C5D0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		6B5062D92BD5038F0091C5D0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6B5062DC2BD5038F0091C5D0 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		6BB196702C04BDA300E8DA03 /* Util.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Util.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,7 +41,7 @@
 		6B1A0CCE2BDCE85300B2870C /* Util */ = {
 			isa = PBXGroup;
 			children = (
-				6B1A0CD12BDCE86C00B2870C /* Math.swift */,
+				6BB196702C04BDA300E8DA03 /* Util.swift */,
 			);
 			path = Util;
 			sourceTree = "<group>";
@@ -73,14 +71,6 @@
 			path = DTO;
 			sourceTree = "<group>";
 		};
-		6B1A0CDA2BDCF14D00B2870C /* Sources */ = {
-			isa = PBXGroup;
-			children = (
-				6B1A0CDB2BDCF15B00B2870C /* Wolfram.swift */,
-			);
-			path = Sources;
-			sourceTree = "<group>";
-		};
 		6B5062C92BD5038E0091C5D0 = {
 			isa = PBXGroup;
 			children = (
@@ -100,7 +90,6 @@
 		6B5062D42BD5038E0091C5D0 /* SUPlayground */ = {
 			isa = PBXGroup;
 			children = (
-				6B1A0CDA2BDCF14D00B2870C /* Sources */,
 				6B1A0CD32BDCF01500B2870C /* Data */,
 				6B1A0CCE2BDCE85300B2870C /* Util */,
 				6B5062D52BD5038E0091C5D0 /* SUPlaygroundApp.swift */,
@@ -193,10 +182,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6B1A0CDC2BDCF15B00B2870C /* Wolfram.swift in Sources */,
 				6B5062D82BD5038E0091C5D0 /* ContentView.swift in Sources */,
-				6B1A0CD22BDCE86C00B2870C /* Math.swift in Sources */,
 				6B5062D62BD5038E0091C5D0 /* SUPlaygroundApp.swift in Sources */,
+				6BB196712C04BDA300E8DA03 /* Util.swift in Sources */,
 				6B1A0CD92BDCF0A400B2870C /* WolframDataSource.swift in Sources */,
 				6B1A0CD72BDCF06200B2870C /* WolframPrimeResult.swift in Sources */,
 			);

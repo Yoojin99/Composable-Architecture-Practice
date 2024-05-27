@@ -2,6 +2,8 @@ import Foundation
 
 protocol PrimeDataSource {}
 
+private let wolframAlphaApiKey = "6H69Q3-828TKQJ4EP"
+
 final class WolframDataSource {
     func wolframAlpha(query: String, callback: @escaping (WolframPrimeResult?) -> Void) -> Void {
       var components = URLComponents(string: "https://api.wolframalpha.com/v2/query")!

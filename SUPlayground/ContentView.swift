@@ -26,12 +26,6 @@ struct ContentView: View {
     }
 }
 
-private func ordinal(_ n: Int) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .ordinal
-    return formatter.string(for: n) ?? ""
-}
-
 /*
  class -> struct. Decoupled state from combine, SwiftUI framework, 그래서 리눅스같은 곳에서도 이 구조체를 따로 가져다 쓸 수 있음.
  값 타입으로 변한 것 자체가 큰 장점. 
@@ -381,23 +375,6 @@ struct CounterView: View {
     }
 }
 
-func nthPrime(_ n: Int, callback: @escaping (Int?) -> Void) -> Void {
-    WolframDataSource().wolframAlpha(query: "prime \(n)") { result in
-    callback(
-      result
-        .flatMap {
-          $0.queryresult
-            .pods
-            .first(where: { $0.primary == .some(true) })?
-            .subpods
-            .first?
-            .plaintext
-      }
-      .flatMap(Int.init)
-    )
-  }
-}
-
 struct IsPrimeModalView: View {
     @ObservedObject var store: Store<AppState, AppAction>
     
@@ -407,7 +384,7 @@ struct IsPrimeModalView: View {
     
     var body: some View {
         VStack {
-            if Math.isPrime(n: store.value.count) {
+            if isPrime(store.value.count) {
                 Text("\(store.value.count) is prime")
                 
                 Button(action: {
@@ -467,5 +444,16 @@ struct FavoritePrimesView: View {
 }
 
 #Preview {
-    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: logging(activityFeed(appReducer))))
+    ContentView(
+        store: Store(
+            initialValue: AppState(),
+            reducer: with(
+                appReducer,
+                compose(
+                    logging,
+                    activityFeed
+                )
+            )
+        )
+    )
 }
