@@ -252,6 +252,17 @@ let appReducer: (inout AppState, AppAction) -> Void = combine(
     pullback(favoritePrimesReducer, value: \.favoritePrimes, action: \.favoritePrimes)
 )
 
+func logging<Value, Action>(
+    _ reducer: @escaping (inout Value, Action) -> Void
+) -> (inout Value, Action) -> Void {
+    return { value, action in
+        reducer(&value, action)
+        print("Action: \(action)")
+        print("Value:")
+        dump(value)
+        print("---")
+    }
+}
 
 final class Store<Value, Action>: ObservableObject {
     let reducer: (inout Value, Action) -> Void
@@ -456,5 +467,5 @@ struct FavoritePrimesView: View {
 }
 
 #Preview {
-    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: activityFeed(appReducer)))
+    ContentView(store: Store<AppState, AppAction>(initialValue: AppState(), reducer: logging(activityFeed(appReducer))))
 }
