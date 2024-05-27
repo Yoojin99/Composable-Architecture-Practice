@@ -23,3 +23,20 @@ final class WolframDataSource {
       .resume()
     }
 }
+
+func nthPrime(_ n: Int, callback: @escaping (Int?) -> Void) -> Void {
+    WolframDataSource().wolframAlpha(query: "prime \(n)") { result in
+    callback(
+      result
+        .flatMap {
+          $0.queryresult
+            .pods
+            .first(where: { $0.primary == .some(true) })?
+            .subpods
+            .first?
+            .plaintext
+      }
+      .flatMap(Int.init)
+    )
+  }
+}

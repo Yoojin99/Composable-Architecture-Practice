@@ -146,7 +146,6 @@ func counterReducer(state: inout Int, action: CounterAction) {
     }
 }
 
-// 굉장히 많은 state 에 접근하고 있기 때문에 굳이 state 를 분리할 필요 없음...? 어떤 건 분리하고 어떤 건 분리하지 않고 이게 과연 좋은건가........
 func primeModalReducer(state: inout AppState, action: PrimeModalAction) {
     switch action {
     case .saveFavoritePrimeTapped:
@@ -178,6 +177,20 @@ func combine<Value, Action>(
     }
 }
 
+final class Store<Value, Action>: ObservableObject {
+    let reducer: (inout Value, Action) -> Void
+    @Published private(set) var value: Value
+    
+    init(initialValue: Value, reducer: @escaping (inout Value, Action) -> Void) {
+        self.value = initialValue
+        self.reducer = reducer
+    }
+    
+    func send(_ action: Action) {
+        reducer(&self.value, action)
+    }
+}
+
 func pullback<LocalValue, GlobalValue, LocalAction, GlobalAction>(
     _ reducer: @escaping (inout LocalValue, LocalAction) -> Void,
     value: WritableKeyPath<GlobalValue, LocalValue>,
@@ -196,27 +209,10 @@ struct _KeyPath<Root, Value> {
     let set: (inout Root, Value) -> Void
 }
 
-// enum 의 get, set
-
-// setter
-// counter.incrTapped -> AppAction , setter : AppAction.counter(.incrTapped)
-
-// getter
-//let action = AppAction.favoritePrimes(.deleteFavoritePrimes([1]))
-//let favoritePrimes: FavoritePrimesAction?
-//switch action {
-//case let .favoritePrimes(action):
-//    favoritePrimes = action
-//default:
-//    favoritePrimes = nil
-//}
-
 struct EnumKeyPath<Root, Value> {
     let embed: (Value) -> Root
     let extract: (Root) -> Value?
 }
-
-// \AppAction.counter // EnumKeyPath<AppAction, CounterAction>
 
 func activityFeed(
     _ reducer: @escaping (inout AppState, AppAction) -> Void
@@ -258,41 +254,7 @@ func logging<Value, Action>(
     }
 }
 
-final class Store<Value, Action>: ObservableObject {
-    let reducer: (inout Value, Action) -> Void
-    @Published var value: Value
-    
-    init(initialValue: Value, reducer: @escaping (inout Value, Action) -> Void) {
-        self.value = initialValue
-        self.reducer = reducer
-    }
-    
-    // 연산을 view 에서 떼내고, reducer 내부로 옮겨버림
-    // view 내부에 연산은 오직 send(userAction) 메서드를 통해서만 이루어짐
-    // 일관된 방법을 제공한다
-    func send(_ action: Action) {
-        reducer(&self.value, action)
-    }
-}
-
 struct CounterView: View {
-    // @State 는 hyper local state 를 위한 것
-    // 외부로 나갔다 다시 들어올 경우 state 를 잃어버림
-    // view 계층의 위-아래를 왔다갔다 할 때 유지하기 위한 다른 장치가 필요
-    // 이때 사용할 수 있는게 obejct binding
-    /*
-     Object binding : @State 와 거의 비슷, except
-     * 어떻게 변화가 일어나는지
-     * Swift UI 시스템에 어떻게 이 변화를 알리는지
-     를 정할 책임이 나한테 있음
-     이는 local 하기보다는 global 변수를 선언하는 것과 비슷함.
-     그래서 앱 전역에서 상태를 유지할 수 있음
-     */
-    /*
-     @ObservedObject var count: Int = 0 의 문제
-     1. 0. 처음 화면에 진입했을 때는 0이겠지만 그 다음에는 마지막으로 우리가 수정한 상태값이어야 함
-     2. @ObservedObject 에 사용되는 것은 Observable Object 프로토콜을 따라야 함. Int 를 extend 하기보다는 우리가 제어하는 상태값 자체가 bindable object가 되기를 바람.
-     */
     @ObservedObject var store: Store<AppState, AppAction>
     @State private var isPrimeModalShown: Bool = false
     @State private var nthPrimeNumber: Int? {
@@ -305,25 +267,11 @@ struct CounterView: View {
     @State private var isNthPrimeAlertShown: Bool = false
     @State private var isNthPrimeButtonDisabled = false
     
-    // MARK: 문제 1
-    // state 의 변경 연산이 많음.
-    // 일부는 localState, 일부는 global state, 또 two-way binding 을 통해 자동으로 상태가 변경되는 경우도 있음
-    // 이런 상태 변경 연산들이 view 에 골고루 퍼져있음
-    // 이 코드를 처음보는 사람은 상태 변경하는 코드를 어디에 추가해야 할지 마땅한 장소를 찾기 어려움
-    // 명시적으로 inline / action handler / two-way binding 중 어떤 것?
-    // in line mutations / 또한 imperative 하며 declarative 하지 않음
     var body: some View {
         VStack {
             HStack {
                 Button(action: {
                     store.send(.counter(.decrTapped))
-//                    // 직접 state 에 연산을 하는 것보다 이렇게 하는 것이 좋은 이유
-//                    // 여기서 사용자가 하는게 무엇인지를 설명하고 이를 함수에 전달하는 것!
-//                    // 이는 사용자 액션을 declarative 하게 정의했다고 할 수 있음
-//                    // 즉 연산을 하기보다는 사용자의 액션을 정의했다고 할 수 있음
-//                    // 연산은 reducer 함수에 넣어둠으로써 연산에 적합한 장소를 찾은 것
-//                    self.store.value = counterReducer(state: self.store.value, action: .decrTapped)
-////                    store.value.count -= 1
                 }, label: {
                     Text("-")
                 })
@@ -337,17 +285,7 @@ struct CounterView: View {
             })
             
             Button(action: {
-                // MARK: 문제 1
-                // step by step 으로 수행하고 있음.
-                // SU는 body 프로퍼티를 통해 가장 간단한 방법으로 view 를 표현하고 있으며 개발자는 view 계층에만 집중할 수 있음
-                // 이는 view 를 이해하기 쉽게 만들며 변경을 쉽게하며 테스트를 쉽게 만듦
-                // 근데 아래 button disable 시키는 로직은 더러워 보임. 클로저 내부에 로직이 넘치고 있고 view 의 declarative 한 성질(view 계층에 단순히 state 를 연결하는 것)을 죽이고 있음
-                // helper function 을 따로 뺄 수 있는데 이러면 또 helper function 으로 빼지 않은 곳과 코드 작성 방식이 달라지게 되며 팀은 helper 함수로 빼야 할 경우의 가이드라인을 작성해야 할 것임.
-                // 가장 큰 문제는 이렇게 연산이 흩뿌려져 있을 수록 싱크가 안맞기 더 쉬워진다는 것임
                 isNthPrimeButtonDisabled = true
-                // MARK: 문제 3
-                // 제어할 수 없음 : 취소, throttle 할 수 있는 방법 없으며 테스트도 안됨.
-                // side effect 를 수행하는 방법은 우리한테 달려있음
                 nthPrime(store.value.count) { prime in
                     isNthPrimeButtonDisabled = false
                     self.nthPrimeNumber = prime
@@ -392,14 +330,6 @@ struct IsPrimeModalView: View {
                         store.send(.primeModal(.removeFavoritePrimeTapped))
                     } else {
                         store.send(.primeModal(.saveFavoritePrimeTapped))
-//                        store.value.favoritePrimes.insert(store.value.count)
-//                        // MARK: 문제 2
-//                        // activityFeed 에 추가하는 건 여기서만이 아니라 Favorite Primes 화면에서도 수행해야 함!
-//                        // 근데 이를 개발자의 실수로 잊어먹기 쉬움
-//                        // AppState 에 한번에 수행하는 함수를 추가할 수도 있음. 이러면 상태를 변경하는 방법이 세가지임
-//                        // 1. inline 2. action block 3. struct 에 메서드 추가
-//                        // 팀은 이거에 대해 가이드라인을 또 작성해야 하고 Apple 은 이런 방법에 대해 명시적인 가이드라인을 제공하고 있지 않음
-//                        store.value.activityFeed.append(.init(timestamp: Date(), type: .addedFavoritePrime(store.value.count)))
                     }
                 }, label: {
                     if isSavedInFavoritePrimes {
@@ -416,11 +346,6 @@ struct IsPrimeModalView: View {
 }
 
 struct FavoritePrimesView: View {
-    // MARK: 문제 4 : state 가 composable 하지 않음.
-    // state 의 일부만 가져올 수는 없는가?
-    // 우리가 원하는 것만 알 수 있게 한다면 이 view 를 별도로 분리해서 완전히 고립되게 할 수 있음
-    // 이러면 이해하기 쉽고, 고립되어 있기 때문에 다른 요소를 생각할 필요 없음. modular application design 의 원칙임
-    // 이 view 를 완전히 고립시켜서 다른 ui 에 쉽게 plug in 할 수 있게 하는 것.
     @ObservedObject var store: Store<AppState, AppAction>
     
     var body: some View {
@@ -431,12 +356,7 @@ struct FavoritePrimesView: View {
                 Text("\(prime)")
             }
             .onDelete(perform: { indexSet in
-                let removedNumbers = indexSet.map{ favoritePrimes[$0] }
-                
-                for number in removedNumbers {
-                    store.value.favoritePrimes.remove(number)
-                    store.value.activityFeed.append(.init(timestamp: Date(), type: .removedFavoritePrime(number)))
-                }
+                self.store.send(.favoritePrimes(.deleteFavoritePrimes(indexSet)))
             })
         }
         .navigationTitle("Favorite Primes")
